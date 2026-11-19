@@ -46,7 +46,14 @@ const isConfirmingFire = ref(false)
       </span>
 
       <div class="min-w-0 flex-1">
-        <h3 class="text-lg leading-snug font-semibold text-crypt-50">{{ minion.name }}</h3>
+        <h3 class="text-lg leading-snug font-semibold text-crypt-50">
+          <RouterLink
+            :to="{ name: 'minion', params: { id: minion.id } }"
+            class="transition-colors hover:text-ember-300"
+          >
+            {{ minion.name }}
+          </RouterLink>
+        </h3>
         <p class="text-sm text-crypt-400">{{ profile.label }}</p>
       </div>
 
