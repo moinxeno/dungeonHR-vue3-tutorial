@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * Every variable in `@theme` becomes both a CSS custom property and a set of utility classes.
+ * `--color-crypt-900` gives us `bg-crypt-900`, `text-crypt-900`, `border-crypt-900`, and so on.
+ * `static` emits every variable even if no utility uses it, so plain CSS (such as the scoped
+ * styles in our components) can always rely on `var(--color-…)`.
+ */
+@theme static {
+  /* Typography */
+  --font-display: 'Cinzel', ui-serif, Georgia, serif;
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  /* Crypt: cold, slightly violet stone. Backgrounds, surfaces, borders and body text. */
+  --color-crypt-50: #f6f5f9;
+  --color-crypt-100: #ebe8f2;
+  --color-crypt-200: #d3cee1;
+  --color-crypt-300: #aea7c4;
+  --color-crypt-400: #827a9e;
+  --color-crypt-500: #5f5879;
+  --color-crypt-600: #453f5a;
+  --color-crypt-700: #312c42;
+  --color-crypt-800: #221e2f;
+  --color-crypt-900: #17141f;
+  --color-crypt-950: #0c0a12;
+
+  /* Ember: torchlight. Primary accent for actions and focus. */
+  --color-ember-300: #fdba74;
+  --color-ember-400: #fb923c;
+  --color-ember-500: #f97316;
+  --color-ember-600: #ea580c;
+  --color-ember-700: #c2410c;
+
+  /* Ichor: toxic green. Health and success. */
+  --color-ichor-300: #bef264;
+  --color-ichor-400: #a3e635;
+  --color-ichor-500: #84cc16;
+  --color-ichor-600: #65a30d;
+
+  /* Blood: danger, warnings and threat. */
+  --color-blood-300: #fca5a5;
+  --color-blood-400: #f87171;
+  --color-blood-500: #ef4444;
+  --color-blood-600: #dc2626;
+  --color-blood-700: #b91c1c;
+
+  /* Gold: salaries and everything the Dark Lord's accountant cares about. */
+  --color-gold-300: #fde047;
+  --color-gold-400: #facc15;
+  --color-gold-500: #eab308;
+}
+
+/* Global defaults. DungeonHR is dark by design, so there is no light theme to switch to. */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply min-h-screen bg-crypt-950 font-sans text-crypt-100 antialiased;
+    /* A faint torch glow at the top of the page. */
+    background-image: radial-gradient(
+      ellipse 80% 50% at 50% -10%,
+      color-mix(in oklab, var(--color-ember-600) 18%, transparent),
+      transparent
+    );
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-wide;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-ember-400;
+  }
+}

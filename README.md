@@ -22,6 +22,25 @@ orcs, minotaurs, beholders and one very punctual werewolf. It is also a complete
 Vue 3 (Single File Components, `<script setup>`, Composition API) · TypeScript · Vite · Pinia ·
 Vue Router · Tailwind CSS · Vitest.
 
+## Quick start
+
+Requires Node.js `22.18+` or `24.12+`.
+
+```bash
+npm install
+npm run dev
+```
+
+| Script | Purpose |
+| --- | --- |
+| `npm run dev` | Start the dev server with hot module replacement |
+| `npm run build` | Type-check and build for production into `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run type-check` | Type-check `.ts` and `.vue` files with `vue-tsc` |
+| `npm run lint` | Lint with Oxlint and ESLint (auto-fix) |
+| `npm run format` | Format `src/` with Prettier |
+| `npm run test:unit` | Run unit tests with Vitest (watch mode) |
+
 ## Learn by building it
 
 The [`tutorial/`](./tutorial/README.md) folder contains two tracks:
