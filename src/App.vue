@@ -14,7 +14,8 @@ import AppHeader from '@/components/layout/AppHeader.vue'
 
   <AppHeader />
 
-  <main id="main" class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+  <!-- tabindex="-1": focusable from code (see router/index.ts), but not a stop when tabbing. -->
+  <main id="main" tabindex="-1" class="mx-auto max-w-6xl px-4 py-10 outline-none sm:px-6 lg:px-8">
     <!-- The component of the current route is rendered here. -->
     <RouterView />
   </main>

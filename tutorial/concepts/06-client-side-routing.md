@@ -238,12 +238,13 @@ In an MPA, the browser handles three things on every navigation that an SPA must
 | --- | --- |
 | updates the tab title | `router.afterEach` sets `document.title` from `meta.title` |
 | scrolls to the top (or restores the position on back) | `scrollBehavior` |
-| moves focus to the top of the new document, so screen readers start reading the new page | **Not handled yet.** Focus stays on the clicked link. |
+| moves focus to the top of the new document, so screen readers start reading the new page | Not handled in chapter 4: focus stays on the clicked link. Chapter 7 adds an `afterEach` hook that focuses `<main>`. |
 
-Focus management is the part most SPAs get wrong. Common approaches: move focus to the new page's
-`<h1>` (with `tabindex="-1"`) after each navigation, or announce the new title in a live region. The
-skip link in `App.vue` helps keyboard users either way. Libraries exist for this, and so does a small
-`afterEach` hook; it is a good exercise.
+Focus management is the part most SPAs get wrong. Common approaches: move focus to the main content
+or the new page's `<h1>` (with `tabindex="-1"`) after each navigation, or announce the new title in a
+live region. DungeonHR does the first, in a few lines of `router.afterEach` (see
+[chapter 7](../build/07-testing-and-polish.md#81-focus-management-after-navigation)). The skip link in
+`App.vue` helps keyboard users either way.
 
 ## 10. Why the roster forgets
 

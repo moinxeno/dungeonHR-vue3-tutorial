@@ -1,3 +1,4 @@
+import { nextTick } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 
 import RosterView from '@/views/RosterView.vue'
@@ -68,8 +69,15 @@ const router = createRouter({
   },
 })
 
-router.afterEach((to) => {
+router.afterEach((to, from) => {
   document.title = to.meta.title ? `${to.meta.title} · DungeonHR` : 'DungeonHR'
+
+  // Accessibility: a full page load starts reading at the top of the new page. In a single-page app,
+  // focus would stay on the link that was clicked, so screen reader users would not notice that the
+  // page changed. Move focus to the main content instead, once the new page has rendered.
+  // Skipped on the first load (nothing to move from) and when only the query string changes.
+  if (from.matched.length === 0 || to.path === from.path) return
+  void nextTick(() => document.getElementById('main')?.focus({ preventScroll: true }))
 })
 
 export default router
