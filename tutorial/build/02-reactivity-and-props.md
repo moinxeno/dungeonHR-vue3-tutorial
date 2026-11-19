@@ -1000,9 +1000,12 @@ git commit -m "feat: render the roster from typed, reactive data"
 - **`v-for`** renders lists; **`:key`** gives each item a stable identity. Never use the index.
 
 The roster now reacts to changes, but only the parent can change anything. The cards are
-display-only: you cannot heal a single minion or recruit a new one. In
-[Chapter 3: Events and Forms](./03-events-and-forms.md) the components learn to talk back to their
-parents.
+display-only: you cannot heal a single minion or recruit a new one. You may also have noticed that
+stress only ever goes up. Raids add it, the healer does not treat it, and there is no way to send an
+exhausted minion home for a rest. That is not an oversight in the game rules but a limitation of
+our components: the card that shows a stressed minion has no way to ask its parent to do something
+about it. In [Chapter 3: Events and Forms](./03-events-and-forms.md) the components learn to talk
+back to their parents, and the first thing a card will ask for is a rest.
 
 **Go deeper:**
 
