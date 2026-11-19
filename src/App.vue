@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AppFooter from '@/components/layout/AppFooter.vue'
 import AppHeader from '@/components/layout/AppHeader.vue'
 </script>
 
@@ -17,4 +18,6 @@ import AppHeader from '@/components/layout/AppHeader.vue'
     <!-- The component of the current route is rendered here. -->
     <RouterView />
   </main>
+
+  <AppFooter />
 </template>

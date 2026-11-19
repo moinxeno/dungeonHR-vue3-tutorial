@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormField from '@/components/ui/FormField.vue'
@@ -87,6 +87,17 @@ function toDraft(state: FormState): LeaveRequestDraft {
 }
 
 const form = ref<FormState>(createInitialState())
+
+// The route reuses this page when only the query changes, e.g. from `?minion=m-006` to
+// `?minion=m-012`. The form state was created from the old value, so follow the prop explicitly.
+// The getter `() => preselectedMinionId` is required: a destructured prop passed directly would
+// be a one-time snapshot (and the compiler refuses it).
+watch(
+  () => preselectedMinionId,
+  (minionId) => {
+    if (minionId) form.value.minionId = minionId
+  },
+)
 
 const draft = computed(() => toDraft(form.value))
 const applicant = computed(() => minions.find((minion) => minion.id === form.value.minionId))

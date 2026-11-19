@@ -1,51 +1,33 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
-import { INCOMPATIBILITY_RULES } from '@/data/incompatibilityRules'
+import { useAggroCalculator } from '@/composables/useAggroCalculator'
+import { useLocalStorage } from '@/composables/useLocalStorage'
 import { seedAssignments } from '@/data/seedAssignments'
 import { seedMinions } from '@/data/seedMinions'
 import { seedSectors } from '@/data/seedSectors'
-import {
-  SHIFTS,
-  type Assignment,
-  type DungeonAlert,
-  type DungeonSector,
-  type Gold,
-  type Minion,
-  type MinionDraft,
-  type MinionId,
-  type SectorId,
-  type Severity,
-  type Shift,
-  type Species,
+import type {
+  Assignment,
+  DungeonSector,
+  Gold,
+  Minion,
+  MinionDraft,
+  MinionId,
+  SectorId,
+  Shift,
 } from '@/types/dungeon'
 import { toIsoDate } from '@/utils/date'
-import { formatGold } from '@/utils/gold'
 import { createId } from '@/utils/id'
 
 /** How much stress a rest removes. */
 export const REST_STRESS_RELIEF = 25
-/** Stress at which the burnout monitor warns, and at which it gets loud. */
-export const BURNOUT_WARNING_STRESS = 70
-export const BURNOUT_CRITICAL_STRESS = 90
-/** A payroll above this share of the budget is critical rather than just a warning. */
-const BUDGET_CRITICAL_RATIO = 1.25
 
 /** The outcome of an action that the store may refuse, with a reason the UI can show. */
 export type ActionResult = { ok: true } | { ok: false; reason: string }
 
-const SEVERITY_ORDER: Record<Severity, number> = { critical: 0, warning: 1, info: 2 }
-
 /** Key for one sector-and-shift slot, e.g. `"s-gatehouse:midnight"`. */
 function slotKey(sectorId: SectorId, shift: Shift): string {
   return `${sectorId}:${shift}`
-}
-
-/** The rule that forbids these two species from working together, if any. Order does not matter. */
-function findIncompatibility(first: Species, second: Species) {
-  return INCOMPATIBILITY_RULES.find(
-    ({ between: [a, b] }) => (a === first && b === second) || (a === second && b === first),
-  )
 }
 
 /** Random integer between `min` and `max`, both inclusive. */
@@ -66,9 +48,17 @@ export const useDungeonStore = defineStore('dungeon', () => {
   // State
   // -------------------------------------------------------------------------
 
-  const minions = ref<Minion[]>(structuredClone(seedMinions))
+  // Minions and assignments change while the app runs, so they are saved in the browser and
+  // restored on the next visit. `useLocalStorage` returns a ref, so the rest of the store does not
+  // care whether a piece of state is persisted or not.
+  const minions = useLocalStorage<Minion[]>('dungeonhr:minions', structuredClone(seedMinions))
+  const assignments = useLocalStorage<Assignment[]>(
+    'dungeonhr:assignments',
+    structuredClone(seedAssignments),
+  )
+  // Sectors never change at runtime. Not persisting them means an update to the seed data reaches
+  // every user immediately.
   const sectors = ref<DungeonSector[]>(structuredClone(seedSectors))
-  const assignments = ref<Assignment[]>(structuredClone(seedAssignments))
 
   // -------------------------------------------------------------------------
   // Getters
@@ -114,6 +104,9 @@ export const useDungeonStore = defineStore('dungeon', () => {
     () => minions.value.filter((minion) => minion.hp < minion.maxHp).length,
   )
 
+  /** Everything the Aggro & Burnout Monitor warns about. The rules live in the composable. */
+  const { alerts } = useAggroCalculator(minions, sectors, assignments)
+
   // Getters that take an argument are plain functions. They are not cached themselves, but they
   // read from the cached lookup tables above, so calling them is cheap.
   function getMinion(id: MinionId): Minion | undefined {
@@ -135,79 +128,6 @@ export const useDungeonStore = defineStore('dungeon', () => {
   function getSectorPayroll(sectorId: SectorId): Gold {
     return payrollBySector.value.get(sectorId) ?? 0
   }
-
-  /** Everything the Aggro & Burnout Monitor warns about, most severe first. */
-  const alerts = computed<DungeonAlert[]>(() => {
-    const found: DungeonAlert[] = []
-
-    for (const sector of sectors.value) {
-      for (const shift of SHIFTS) {
-        const crew = getCrew(sector.id, shift)
-
-        if (crew.length > sector.capacity) {
-          found.push({
-            kind: 'over-capacity',
-            id: `over-capacity:${sector.id}:${shift}`,
-            severity: 'warning',
-            message: `${sector.name} has ${crew.length} minions on the ${shift} shift, but only ${sector.capacity} posts.`,
-            sectorId: sector.id,
-            shift,
-            capacity: sector.capacity,
-            assigned: crew.length,
-          })
-        }
-
-        // Check every pair in the crew exactly once.
-        crew.forEach((first, index) => {
-          for (const second of crew.slice(index + 1)) {
-            const rule = findIncompatibility(first.species, second.species)
-            if (!rule) continue
-            // Sort the IDs so the alert ID does not depend on who was assigned first.
-            const pair =
-              first.id < second.id
-                ? ([first.id, second.id] as const)
-                : ([second.id, first.id] as const)
-            found.push({
-              kind: 'incompatible-species',
-              id: `incompatible:${sector.id}:${shift}:${pair[0]}:${pair[1]}`,
-              severity: rule.severity,
-              message: `${first.name} and ${second.name} share the ${shift} shift at ${sector.name}. ${rule.reason}`,
-              sectorId: sector.id,
-              shift,
-              minionIds: pair,
-            })
-          }
-        })
-      }
-
-      const payroll = getSectorPayroll(sector.id)
-      if (payroll > sector.payrollBudget) {
-        found.push({
-          kind: 'over-budget',
-          id: `over-budget:${sector.id}`,
-          severity: payroll > sector.payrollBudget * BUDGET_CRITICAL_RATIO ? 'critical' : 'warning',
-          message: `${sector.name} pays ${formatGold(payroll)} a month on a budget of ${formatGold(sector.payrollBudget)}.`,
-          sectorId: sector.id,
-          budget: sector.payrollBudget,
-          payroll,
-        })
-      }
-    }
-
-    for (const minion of minions.value) {
-      if (minion.stress < BURNOUT_WARNING_STRESS) continue
-      found.push({
-        kind: 'burnout-risk',
-        id: `burnout:${minion.id}`,
-        severity: minion.stress >= BURNOUT_CRITICAL_STRESS ? 'critical' : 'warning',
-        message: `${minion.name} is at ${minion.stress} stress. Time for a rest.`,
-        minionId: minion.id,
-        stress: minion.stress,
-      })
-    }
-
-    return found.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
-  })
 
   // -------------------------------------------------------------------------
   // Actions
@@ -297,6 +217,12 @@ export const useDungeonStore = defineStore('dungeon', () => {
     }
   }
 
+  /** Throws away all changes and restores the dungeon as the Dark Lord left it. */
+  function resetToSeed(): void {
+    minions.value = structuredClone(seedMinions)
+    assignments.value = structuredClone(seedAssignments)
+  }
+
   return {
     // State
     minions,
@@ -323,6 +249,7 @@ export const useDungeonStore = defineStore('dungeon', () => {
     unassignMinion,
     simulateRaid,
     callHealer,
+    resetToSeed,
   }
 })
 

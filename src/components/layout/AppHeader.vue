@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import AppNav from '@/components/layout/AppNav.vue'
+import ShiftClock from '@/components/layout/ShiftClock.vue'
 </script>
 
 <template>
@@ -20,6 +21,8 @@ import AppNav from '@/components/layout/AppNav.vue'
           </span>
         </span>
       </RouterLink>
+
+      <ShiftClock class="hidden md:block lg:mr-auto" />
 
       <AppNav />
     </div>

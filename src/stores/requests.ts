@@ -1,6 +1,7 @@
 import { acceptHMRUpdate, defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 
+import { useLocalStorage } from '@/composables/useLocalStorage'
 import { seedRequests } from '@/data/seedRequests'
 import { useDungeonStore } from '@/stores/dungeon'
 import type { LeaveRequest, LeaveRequestDraft, RequestId, RequestType } from '@/types/dungeon'
@@ -21,7 +22,11 @@ export const useRequestsStore = defineStore('requests', () => {
   // to the dungeon store, so we ask the dungeon store to do it.
   const dungeon = useDungeonStore()
 
-  const requests = ref<LeaveRequest[]>(structuredClone(seedRequests))
+  // Saved in the browser, like the dungeon's minions and assignments.
+  const requests = useLocalStorage<LeaveRequest[]>(
+    'dungeonhr:requests',
+    structuredClone(seedRequests),
+  )
 
   const pendingCount = computed(
     () => requests.value.filter((request) => request.status === 'pending').length,
@@ -55,7 +60,11 @@ export const useRequestsStore = defineStore('requests', () => {
     if (request) request.status = 'rejected'
   }
 
-  return { requests, pendingCount, submitRequest, approveRequest, rejectRequest }
+  function resetToSeed(): void {
+    requests.value = structuredClone(seedRequests)
+  }
+
+  return { requests, pendingCount, submitRequest, approveRequest, rejectRequest, resetToSeed }
 })
 
 if (import.meta.hot) {

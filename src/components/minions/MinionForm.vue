@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, useTemplateRef } from 'vue'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FormField from '@/components/ui/FormField.vue'
@@ -71,6 +71,15 @@ function handleSubmit(): void {
   draft.value = createEmptyDraft()
   hasAttemptedSubmit.value = false
 }
+
+// A template ref: after mounting, `nameInput.value` is the <input ref="name-input"> element.
+const nameInput = useTemplateRef<HTMLInputElement>('name-input')
+
+// The form appears because the user clicked "Recruit a minion", so the obvious next step is typing
+// a name. The element only exists in the DOM once the component is mounted, hence `onMounted`.
+onMounted(() => {
+  nameInput.value?.focus()
+})
 </script>
 
 <template>
@@ -92,6 +101,7 @@ function handleSubmit(): void {
       >
         <input
           :id="id"
+          ref="name-input"
           v-model="draft.name"
           type="text"
           autocomplete="off"
