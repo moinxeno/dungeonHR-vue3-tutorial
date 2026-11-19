@@ -1,70 +1,62 @@
 <script setup lang="ts">
-// For now, every value is hard-coded. In chapter 2 these constants become props,
-// so that each card can show a different minion.
-const name = 'Grizzle Snaggletooth'
-const speciesLabel = 'Goblin'
-const icon = '👺'
-const hp = 18
-const maxHp = 24
-const threatLevel = 2
-const salary = 120
-const isUnionized = true
+import { computed } from 'vue'
 
-// Plain arithmetic, evaluated once when the component is created.
-const hpPercent = Math.round((hp / maxHp) * 100)
+import BaseBadge from '@/components/ui/BaseBadge.vue'
+import StatBar from '@/components/ui/StatBar.vue'
+import ThreatLevelIndicator from '@/components/minions/ThreatLevelIndicator.vue'
+import { SPECIES_PROFILES } from '@/data/species'
+import type { Minion } from '@/types/dungeon'
+import { formatGold } from '@/utils/gold'
+
+const { minion } = defineProps<{
+  minion: Minion
+}>()
+
+// Both values are derived from the prop. `computed` re-evaluates them when the minion changes
+// and caches the result in between.
+const profile = computed(() => SPECIES_PROFILES[minion.species])
+const isKnockedOut = computed(() => minion.hp === 0)
 </script>
 
 <template>
   <article
     class="minion-card rounded-2xl border border-crypt-700 bg-crypt-900/80 p-5 shadow-lg shadow-black/40"
+    :class="{ 'opacity-60 grayscale': isKnockedOut }"
   >
     <header class="flex items-start gap-4">
       <span
         class="grid size-14 shrink-0 place-items-center rounded-xl bg-crypt-800 text-3xl"
         aria-hidden="true"
+        :title="profile.description"
       >
-        {{ icon }}
+        {{ profile.icon }}
       </span>
 
       <div class="min-w-0 flex-1">
-        <h3 class="text-lg leading-snug font-semibold text-crypt-50">{{ name }}</h3>
-        <p class="text-sm text-crypt-400">{{ speciesLabel }}</p>
+        <h3 class="text-lg leading-snug font-semibold text-crypt-50">{{ minion.name }}</h3>
+        <p class="text-sm text-crypt-400">{{ profile.label }}</p>
       </div>
 
-      <span
-        v-if="isUnionized"
-        class="rounded-full border border-ichor-600/50 bg-ichor-500/10 px-2.5 py-0.5 text-xs font-medium text-ichor-300"
-      >
-        Union
-      </span>
+      <div class="flex flex-col items-end gap-1.5">
+        <BaseBadge v-if="isKnockedOut" tone="danger">Knocked out</BaseBadge>
+        <BaseBadge v-if="minion.isUnionized" tone="success">Union</BaseBadge>
+      </div>
     </header>
 
-    <dl class="mt-5 space-y-4 text-sm">
-      <div>
-        <div class="flex justify-between">
-          <dt class="text-crypt-400">Hit points</dt>
-          <dd class="font-medium text-crypt-100">{{ hp }} / {{ maxHp }}</dd>
-        </div>
-        <div
-          class="mt-1.5 h-2 overflow-hidden rounded-full bg-crypt-800"
-          role="meter"
-          aria-label="Hit points"
-          :aria-valuenow="hp"
-          aria-valuemin="0"
-          :aria-valuemax="maxHp"
-        >
-          <div class="h-full rounded-full bg-ichor-500" :style="{ width: `${hpPercent}%` }"></div>
-        </div>
-      </div>
+    <div class="mt-5 space-y-3">
+      <StatBar label="Hit points" :value="minion.hp" :max="minion.maxHp" variant="health" />
+      <StatBar label="Stress" :value="minion.stress" :max="100" variant="stress" />
+    </div>
 
-      <div class="flex justify-between">
+    <dl class="mt-4 space-y-3 text-sm">
+      <div class="flex items-center justify-between">
         <dt class="text-crypt-400">Threat level</dt>
-        <dd class="font-medium text-blood-400">{{ threatLevel }} / 5</dd>
+        <dd><ThreatLevelIndicator :level="minion.threatLevel" /></dd>
       </div>
 
       <div class="flex justify-between">
         <dt class="text-crypt-400">Salary</dt>
-        <dd class="font-medium text-gold-400">{{ salary }} gp / month</dd>
+        <dd class="font-medium text-gold-400">{{ formatGold(minion.salary) }} / month</dd>
       </div>
     </dl>
   </article>
@@ -79,7 +71,9 @@ const hpPercent = Math.round((hp / maxHp) * 100)
   transition:
     border-color 200ms ease,
     box-shadow 200ms ease,
-    translate 200ms ease;
+    translate 200ms ease,
+    opacity 300ms ease,
+    filter 300ms ease;
 }
 
 .minion-card:hover {
