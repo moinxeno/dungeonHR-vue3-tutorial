@@ -79,3 +79,14 @@
     @apply outline-2 outline-offset-2 outline-ember-400;
   }
 }
+
+/*
+ * Shared look for text inputs, selects and textareas.
+ *
+ * `@utility` registers a custom utility class, so `class="form-control"` works like any built-in
+ * Tailwind class (including variants such as `sm:form-control`). We extract this one style because
+ * every form field needs exactly the same dozen classes.
+ */
+@utility form-control {
+  @apply w-full rounded-lg border border-crypt-700 bg-crypt-950/60 px-3 py-2 text-sm text-crypt-50 transition-colors placeholder:text-crypt-500 focus:border-ember-500 aria-[invalid=true]:border-blood-500;
+}

@@ -1,26 +1,39 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 import BaseBadge from '@/components/ui/BaseBadge.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import StatBar from '@/components/ui/StatBar.vue'
 import ThreatLevelIndicator from '@/components/minions/ThreatLevelIndicator.vue'
 import { SPECIES_PROFILES } from '@/data/species'
-import type { Minion } from '@/types/dungeon'
+import type { Minion, MinionId } from '@/types/dungeon'
 import { formatGold } from '@/utils/gold'
 
 const { minion } = defineProps<{
   minion: Minion
 }>()
 
+// The card never changes the minion itself. It asks its parent to, by emitting an event with the
+// minion's ID. Each key is an event name; the tuple lists the arguments the event carries.
+const emit = defineEmits<{
+  heal: [id: MinionId]
+  rest: [id: MinionId]
+  fire: [id: MinionId]
+}>()
+
 // Both values are derived from the prop. `computed` re-evaluates them when the minion changes
 // and caches the result in between.
 const profile = computed(() => SPECIES_PROFILES[minion.species])
 const isKnockedOut = computed(() => minion.hp === 0)
+
+// Local UI state: whether this card is asking "Really fire?". Nobody outside the card cares about
+// it, so it lives here and not in the parent.
+const isConfirmingFire = ref(false)
 </script>
 
 <template>
   <article
-    class="minion-card rounded-2xl border border-crypt-700 bg-crypt-900/80 p-5 shadow-lg shadow-black/40"
+    class="minion-card flex flex-col rounded-2xl border border-crypt-700 bg-crypt-900/80 p-5 shadow-lg shadow-black/40"
     :class="{ 'opacity-60 grayscale': isKnockedOut }"
   >
     <header class="flex items-start gap-4">
@@ -59,6 +72,46 @@ const isKnockedOut = computed(() => minion.hp === 0)
         <dd class="font-medium text-gold-400">{{ formatGold(minion.salary) }} / month</dd>
       </div>
     </dl>
+
+    <footer class="mt-auto flex flex-wrap items-center gap-2 border-t border-crypt-800 pt-4">
+      <template v-if="isConfirmingFire">
+        <p class="mr-auto text-sm text-blood-300">Fire {{ minion.name }}?</p>
+        <BaseButton size="sm" variant="danger" @click="emit('fire', minion.id)">
+          Yes, fire
+        </BaseButton>
+        <BaseButton size="sm" variant="ghost" @click="isConfirmingFire = false">Cancel</BaseButton>
+      </template>
+
+      <template v-else>
+        <BaseButton
+          size="sm"
+          :disabled="minion.hp === minion.maxHp"
+          @click="emit('heal', minion.id)"
+        >
+          Heal
+        </BaseButton>
+        <BaseButton
+          size="sm"
+          :disabled="isKnockedOut || minion.stress === 0"
+          @click="emit('rest', minion.id)"
+        >
+          Send to rest
+        </BaseButton>
+
+        <span v-if="minion.isUnionized" class="ml-auto text-xs text-crypt-400">
+          Firing needs a union hearing
+        </span>
+        <BaseButton
+          v-else
+          size="sm"
+          variant="ghost-danger"
+          class="ml-auto"
+          @click="isConfirmingFire = true"
+        >
+          Fire
+        </BaseButton>
+      </template>
+    </footer>
   </article>
 </template>
 

@@ -71,3 +71,21 @@ export interface Minion {
   /** Optional flavor text for the detail page. */
   bio?: string
 }
+
+/**
+ * The fields a user fills in on the "Recruit a minion" form.
+ * `id` and `hiredOn` are generated; a fresh recruit starts at full HP and zero stress.
+ */
+export type MinionDraft = Omit<Minion, 'id' | 'hiredOn' | 'hp' | 'stress'>
+
+// ---------------------------------------------------------------------------
+// Form helpers
+// ---------------------------------------------------------------------------
+
+/** One error message per invalid field. Missing key = field is valid. */
+export type FieldErrors<T> = Partial<Record<keyof T & string, string>>
+
+export interface ValidationResult<T> {
+  valid: boolean
+  errors: FieldErrors<T>
+}
