@@ -29,9 +29,12 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-/** Adventurers storm the dungeon: everyone takes some damage and gets more stressed. */
+/** Adventurers storm the dungeon: everyone still standing takes damage and gets more stressed. */
 function simulateRaid(): void {
   for (const minion of minions.value) {
+    // Knocked-out minions are out of the fight: no further damage, no further stress.
+    if (minion.hp === 0) continue
+
     const damage = randomInt(0, Math.ceil(minion.maxHp * 0.4))
     minion.hp = Math.max(0, minion.hp - damage)
     minion.stress = Math.min(100, minion.stress + randomInt(5, 15))

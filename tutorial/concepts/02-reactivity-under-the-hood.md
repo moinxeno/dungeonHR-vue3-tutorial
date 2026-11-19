@@ -294,8 +294,9 @@ model is the same: dependencies push "you might be outdated", readers pull the a
 
 ## 6. Scheduling: why 24 writes cause one render
 
-In our mini version, `trigger` runs effects immediately. If `simulateRaid` writes 24 properties,
-the effect would run 24 times, each time with half-updated data.
+In our mini version, `trigger` runs effects immediately. The first raid writes 24 properties (`hp`
+and `stress` for each of the twelve minions), so the effect would run 24 times, each time with
+half-updated data.
 
 Vue does not run component render effects immediately. `trigger` puts them into a **queue**, and
 the queue is flushed in a microtask, after the current synchronous code has finished:

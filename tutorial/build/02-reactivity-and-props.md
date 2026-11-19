@@ -769,9 +769,12 @@ function randomInt(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min
 }
 
-/** Adventurers storm the dungeon: everyone takes some damage and gets more stressed. */
+/** Adventurers storm the dungeon: everyone still standing takes damage and gets more stressed. */
 function simulateRaid(): void {
   for (const minion of minions.value) {
+    // Knocked-out minions are out of the fight: no further damage, no further stress.
+    if (minion.hp === 0) continue
+
     const damage = randomInt(0, Math.ceil(minion.maxHp * 0.4))
     minion.hp = Math.max(0, minion.hp - damage)
     minion.stress = Math.min(100, minion.stress + randomInt(5, 15))
@@ -914,10 +917,11 @@ any form it ends up inside.
 
 ### 6.5 What happens when you click "Simulate a raid"
 
-1. `simulateRaid` changes `hp` and `stress` on every minion. That is 24 property writes.
+1. `simulateRaid` changes `hp` and `stress` on every minion that is still standing: up to 24
+   property writes. Knocked-out minions are skipped by the `continue`, so their stress stays put.
 2. Each write notifies everything that read that property: the computed values in `App.vue` and
    the render functions of the affected cards, bars and badges.
-3. Vue does not re-render 24 times. It queues the updates and flushes them once, after your
+3. Vue does not re-render once per write. It queues the updates and flushes them once, after your
    function has finished.
 4. `woundedCount` and `rosterStats` re-run; the stats bar re-renders.
 5. For each card, Vue re-renders only the components whose inputs actually changed. The stat bars
@@ -929,7 +933,8 @@ payroll 5,935 gp, union members 6 / 12, wounded 10).
 
 - Click **Simulate a raid** a few times. HP bars shrink and change color, stress bars grow, the
   "Wounded" count rises, and eventually someone is knocked out: their card fades to gray with a red
-  badge.
+  badge. Raid again and look at that card: its stress no longer changes, because unconscious
+  minions are out of the fight.
 - Click **Call the healer**. All HP bars refill, knocked-out cards come back, and "Wounded" drops to
   0. Stress stays where it was.
 - Open the Vue DevTools (the Vue logo at the bottom of the page), select `App` and expand
