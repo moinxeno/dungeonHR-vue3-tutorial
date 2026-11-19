@@ -4,8 +4,8 @@ import { computed } from 'vue'
 import ThreatLevelIndicator from '@/components/minions/ThreatLevelIndicator.vue'
 import BaseBadge from '@/components/ui/BaseBadge.vue'
 import StatBar from '@/components/ui/StatBar.vue'
-import { seedMinions } from '@/data/seedMinions'
 import { SPECIES_PROFILES } from '@/data/species'
+import { useDungeonStore } from '@/stores/dungeon'
 import { daysBetween, formatDate, toIsoDate } from '@/utils/date'
 import { formatGold } from '@/utils/gold'
 
@@ -14,21 +14,28 @@ const { id } = defineProps<{
   id: string
 }>()
 
+const dungeon = useDungeonStore()
+
 // Everything below is `computed` from `id`. That matters: going from one minion to the next only
 // changes the URL parameter. Vue Router reuses this component instance instead of creating a new
 // one, so `<script setup>` does not run again. Only computed values notice the new `id`.
 //
-// There is no shared roster yet, so this page can only look minions up in the seed data. Recruits,
-// raid damage and firings from the roster page are invisible here. Chapter 5 fixes that.
-const minion = computed(() => seedMinions.find((candidate) => candidate.id === id))
+// The minion comes from the store, so recruits have a profile and raid damage shows up here.
+const minion = computed(() => dungeon.getMinion(id))
 const profile = computed(() => (minion.value ? SPECIES_PROFILES[minion.value.species] : undefined))
 
-const position = computed(() => seedMinions.findIndex((candidate) => candidate.id === id))
+const posting = computed(() => {
+  const assignment = dungeon.getAssignment(id)
+  const sector = assignment ? dungeon.getSector(assignment.sectorId) : undefined
+  return assignment && sector ? `${sector.name}, ${assignment.shift} shift` : 'Not assigned'
+})
+
+const position = computed(() => dungeon.minions.findIndex((candidate) => candidate.id === id))
 const previousMinion = computed(() =>
-  position.value > 0 ? seedMinions[position.value - 1] : undefined,
+  position.value > 0 ? dungeon.minions[position.value - 1] : undefined,
 )
 const nextMinion = computed(() =>
-  position.value >= 0 ? seedMinions[position.value + 1] : undefined,
+  position.value >= 0 ? dungeon.minions[position.value + 1] : undefined,
 )
 
 const yearsOfService = computed(() => {
@@ -107,9 +114,13 @@ const yearsOfService = computed(() => {
                 <span class="text-crypt-400">({{ yearsOfService }} years of service)</span>
               </dd>
             </div>
-            <div class="flex justify-between">
+            <div class="flex justify-between gap-4">
+              <dt class="text-crypt-400">Posted to</dt>
+              <dd class="text-right text-crypt-100 capitalize">{{ posting }}</dd>
+            </div>
+            <div class="flex justify-between gap-4">
               <dt class="text-crypt-400">Employee ID</dt>
-              <dd class="font-mono text-crypt-300">{{ minion.id }}</dd>
+              <dd class="text-right font-mono break-all text-crypt-300">{{ minion.id }}</dd>
             </div>
           </dl>
         </section>
@@ -144,7 +155,7 @@ const yearsOfService = computed(() => {
       <h1 class="text-2xl font-bold text-crypt-100">No such minion</h1>
       <p class="mt-2 text-crypt-300">
         HR has no file for <span class="font-mono">{{ id }}</span
-        >. New recruits do not have a profile page yet.
+        >. Perhaps they were fired, or the link is wrong.
       </p>
     </div>
   </div>

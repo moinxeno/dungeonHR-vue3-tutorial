@@ -29,6 +29,9 @@ export type MinionId = string
 export type SectorId = string
 export type RequestId = string
 
+/** How loudly the Aggro Monitor shouts about something. */
+export type Severity = 'info' | 'warning' | 'critical'
+
 // ---------------------------------------------------------------------------
 // Species & minions
 // ---------------------------------------------------------------------------
@@ -84,7 +87,7 @@ export interface Minion {
 export type MinionDraft = Omit<Minion, 'id' | 'hiredOn' | 'hp' | 'stress'>
 
 // ---------------------------------------------------------------------------
-// Sectors & shifts
+// Sectors, shifts & assignments
 // ---------------------------------------------------------------------------
 
 export const SECTOR_KINDS = [
@@ -111,6 +114,73 @@ export interface DungeonSector {
 
 export const SHIFTS = ['dawn', 'dusk', 'midnight'] as const
 export type Shift = (typeof SHIFTS)[number]
+
+/**
+ * A minion's posting to a sector and shift.
+ * Invariant: each minion holds at most one assignment at a time.
+ */
+export interface Assignment {
+  minionId: MinionId
+  sectorId: SectorId
+  shift: Shift
+}
+
+/**
+ * Two species that must not share the same sector during the same shift.
+ * The pair is unordered: `['orc', 'goblin']` also matches a goblin next to an orc.
+ * Both entries may be the same species (two minotaurs fight over territory).
+ */
+export interface IncompatibilityRule {
+  between: readonly [Species, Species]
+  severity: Exclude<Severity, 'info'>
+  reason: string
+}
+
+// ---------------------------------------------------------------------------
+// Aggro & burnout monitor
+// ---------------------------------------------------------------------------
+
+interface AlertBase {
+  /** Deterministic key derived from the alert's content; stable across recomputations. */
+  id: string
+  severity: Severity
+  /** Human-readable summary, ready to render. */
+  message: string
+}
+
+export interface IncompatibleSpeciesAlert extends AlertBase {
+  kind: 'incompatible-species'
+  sectorId: SectorId
+  shift: Shift
+  minionIds: readonly [MinionId, MinionId]
+}
+
+export interface OverCapacityAlert extends AlertBase {
+  kind: 'over-capacity'
+  sectorId: SectorId
+  shift: Shift
+  capacity: number
+  assigned: number
+}
+
+export interface OverBudgetAlert extends AlertBase {
+  kind: 'over-budget'
+  sectorId: SectorId
+  budget: Gold
+  payroll: Gold
+}
+
+export interface BurnoutRiskAlert extends AlertBase {
+  kind: 'burnout-risk'
+  minionId: MinionId
+  stress: number
+}
+
+/** Discriminated union: narrow on `kind` to access the specific fields. */
+export type DungeonAlert =
+  IncompatibleSpeciesAlert | OverCapacityAlert | OverBudgetAlert | BurnoutRiskAlert
+
+export type AlertKind = DungeonAlert['kind']
 
 // ---------------------------------------------------------------------------
 // Leave & shift requests

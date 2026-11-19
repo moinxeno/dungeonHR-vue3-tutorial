@@ -1,25 +1,25 @@
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
 import MinionCard from '@/components/minions/MinionCard.vue'
 import MinionFilters from '@/components/minions/MinionFilters.vue'
 import MinionForm from '@/components/minions/MinionForm.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import { seedMinions } from '@/data/seedMinions'
-import type { Minion, MinionDraft, MinionId, Species } from '@/types/dungeon'
-import { toIsoDate } from '@/utils/date'
+import { useDungeonStore } from '@/stores/dungeon'
+import type { MinionDraft, Species } from '@/types/dungeon'
 import { formatGold } from '@/utils/gold'
-import { createId } from '@/utils/id'
 
-/** How much stress a rest removes. */
-const REST_STRESS_RELIEF = 25
+// The roster lives in the store now. This view only reads it and asks the store for changes, so
+// navigating away and back no longer loses anything.
+const dungeon = useDungeonStore()
 
-// The roster now lives in this view. That has a price: when you navigate to another page, this
-// component is unmounted and its state is thrown away. Chapter 5 moves the roster into a store.
-const minions = ref<Minion[]>(structuredClone(seedMinions))
+// `storeToRefs` turns the store's state and getters into refs, so destructuring keeps them
+// reactive. (Destructuring the store directly would copy the current values once.)
+const { minions, totalPayroll, unionCount, woundedCount } = storeToRefs(dungeon)
 
 // ---------------------------------------------------------------------------
-// Filters: owned here, edited by <MinionFilters> through v-model
+// Filters: UI state that only this page cares about, so it stays local
 // ---------------------------------------------------------------------------
 
 const search = ref('')
@@ -42,16 +42,6 @@ function resetFilters(): void {
   unionOnly.value = false
 }
 
-// ---------------------------------------------------------------------------
-// Roster statistics (always for the whole roster, not just the filtered view)
-// ---------------------------------------------------------------------------
-
-const totalPayroll = computed(() => minions.value.reduce((sum, minion) => sum + minion.salary, 0))
-const unionCount = computed(() => minions.value.filter((minion) => minion.isUnionized).length)
-const woundedCount = computed(
-  () => minions.value.filter((minion) => minion.hp < minion.maxHp).length,
-)
-
 const rosterStats = computed(() => [
   { label: 'Headcount', value: String(minions.value.length) },
   { label: 'Monthly payroll', value: formatGold(totalPayroll.value) },
@@ -60,76 +50,15 @@ const rosterStats = computed(() => [
 ])
 
 // ---------------------------------------------------------------------------
-// Recruiting: <MinionForm> emits a finished draft, we turn it into a minion
+// Recruiting
 // ---------------------------------------------------------------------------
 
 const isRecruiting = ref(false)
 const minionNames = computed(() => minions.value.map((minion) => minion.name))
 
 function recruitMinion(draft: MinionDraft): void {
-  minions.value.unshift({
-    ...draft,
-    id: createId('m'),
-    hp: draft.maxHp,
-    stress: 0,
-    hiredOn: toIsoDate(new Date()),
-  })
+  dungeon.recruitMinion(draft)
   isRecruiting.value = false
-}
-
-// ---------------------------------------------------------------------------
-// Actions on a single minion, requested by <MinionCard> through events
-// ---------------------------------------------------------------------------
-
-function findMinion(id: MinionId): Minion | undefined {
-  return minions.value.find((minion) => minion.id === id)
-}
-
-function healMinion(id: MinionId): void {
-  const minion = findMinion(id)
-  if (minion) minion.hp = minion.maxHp
-}
-
-function restMinion(id: MinionId): void {
-  const minion = findMinion(id)
-  // Knocked-out minions cannot rest; they need the healer first.
-  if (!minion || minion.hp === 0) return
-  minion.stress = Math.max(0, minion.stress - REST_STRESS_RELIEF)
-}
-
-function fireMinion(id: MinionId): void {
-  const minion = findMinion(id)
-  // The card hides the button for union members, but the owner of the data enforces the rule.
-  if (!minion || minion.isUnionized) return
-  minions.value = minions.value.filter((other) => other.id !== id)
-}
-
-// ---------------------------------------------------------------------------
-// Actions on the whole roster
-// ---------------------------------------------------------------------------
-
-/** Random integer between `min` and `max`, both inclusive. */
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min
-}
-
-/** Adventurers storm the dungeon: everyone still standing takes damage and gets more stressed. */
-function simulateRaid(): void {
-  for (const minion of minions.value) {
-    // Knocked-out minions are out of the fight: no further damage, no further stress.
-    if (minion.hp === 0) continue
-
-    const damage = randomInt(0, Math.ceil(minion.maxHp * 0.4))
-    minion.hp = Math.max(0, minion.hp - damage)
-    minion.stress = Math.min(100, minion.stress + randomInt(5, 15))
-  }
-}
-
-/** The dungeon healer patches everyone up. Stress, sadly, is not covered. */
-function callHealer(): void {
-  for (const minion of minions.value) {
-    minion.hp = minion.maxHp
-  }
 }
 </script>
 
@@ -148,8 +77,8 @@ function callHealer(): void {
         <BaseButton variant="primary" :disabled="isRecruiting" @click="isRecruiting = true">
           Recruit a minion
         </BaseButton>
-        <BaseButton variant="danger" @click="simulateRaid">Simulate a raid</BaseButton>
-        <BaseButton @click="callHealer">Call the healer</BaseButton>
+        <BaseButton variant="danger" @click="dungeon.simulateRaid()">Simulate a raid</BaseButton>
+        <BaseButton @click="dungeon.callHealer()">Call the healer</BaseButton>
       </div>
     </header>
 
@@ -196,9 +125,9 @@ function callHealer(): void {
         v-for="minion in filteredMinions"
         :key="minion.id"
         :minion="minion"
-        @heal="healMinion"
-        @rest="restMinion"
-        @fire="fireMinion"
+        @heal="dungeon.healMinion"
+        @rest="dungeon.restMinion"
+        @fire="dungeon.fireMinion"
       />
     </div>
   </div>

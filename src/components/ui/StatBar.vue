@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-type StatBarVariant = 'health' | 'stress'
+type StatBarVariant = 'health' | 'stress' | 'budget'
 
 const {
   label,
@@ -12,7 +12,10 @@ const {
   label: string
   value: number
   max: number
-  /** `health`: a full bar is good. `stress`: a full bar is bad. Controls the bar color. */
+  /**
+   * Controls the bar color. `health`: a full bar is good. `stress`: a full bar is bad.
+   * `budget`: fine until nearly full, bad only when the value exceeds the maximum.
+   */
   variant?: StatBarVariant
 }>()
 
@@ -22,10 +25,17 @@ const percent = computed(() => {
   return Math.min(100, Math.max(0, Math.round((value / max) * 100)))
 })
 
-/** How good the current value is, from 0 (terrible) to 100 (perfect), regardless of variant. */
+/** How good the current value is, from 0 (terrible) to 100 (perfect), for health and stress. */
 const wellbeing = computed(() => (variant === 'health' ? percent.value : 100 - percent.value))
 
 const barClass = computed(() => {
+  if (variant === 'budget') {
+    // Use the unclamped ratio: a budget can be exceeded, a bar cannot be more than full.
+    const ratio = max > 0 ? value / max : 0
+    if (ratio > 1) return 'bg-blood-500'
+    if (ratio > 0.9) return 'bg-gold-400'
+    return 'bg-ichor-500'
+  }
   if (wellbeing.value > 60) return 'bg-ichor-500'
   if (wellbeing.value > 30) return 'bg-gold-400'
   return 'bg-blood-500'
